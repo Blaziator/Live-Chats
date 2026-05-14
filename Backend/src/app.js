@@ -4,6 +4,9 @@ import cors from 'cors';
 
 import {createServer} from 'node:http';
 
+import dotenv from 'dotenv';
+dotenv.config();
+
 //Local Import
 import connectToSocket from './controllers/socketManager.js';
 import router from './routes/users.route.js';
@@ -26,7 +29,7 @@ app.get('/', (req, res)=>{
 })
 
 const start = async()=>{
-    const connectionDB = await mongoose.connect("mongodb+srv://bhavyak1005_db_user:RD80xUXEzFX3f2Vs@cluster0.psfmrob.mongodb.net/?appName=Cluster0");
+    const connectionDB = await mongoose.connect(process.env.MONGODB_URL);
     console.log(`MongoDB connected to DB Host: ${connectionDB.connection.host}`);
     server.listen(port, ()=>{
         console.log(`Server is listening on port: http://localhost:${port}/`);
