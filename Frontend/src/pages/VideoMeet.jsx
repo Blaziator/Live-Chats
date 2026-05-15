@@ -48,6 +48,8 @@ export default function VideoMeetComponent() {
   let [username, setUsername] = useState("");
   let [videos, setVideos] = useState([]);
 
+  let [lobbyError, setLobbyError] = useState("");
+
   const getPermissions = async () => {
     try {
       const videoPermission = await navigator.mediaDevices.getUserMedia({
@@ -372,6 +374,11 @@ export default function VideoMeetComponent() {
   };
 
   let connect = () => {
+    if (!username.trim()) {
+        setLobbyError("Please enter your user name before joining.");
+        return;
+    }
+    setLobbyError("");
     setAskForUsername(false);
     getMedia();
   };
@@ -497,22 +504,28 @@ export default function VideoMeetComponent() {
   return (
     <>
       {askForUsername === true ? (
-        <div>
-          <h2>Enter into lobby</h2>
-          <TextField
-            id="outlined-basic"
-            label="Username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            variant="outlined"
-          />
-          <Button variant="contained" onClick={connect}>
-            Connect
-          </Button>
-
-          <div>
-            <video ref={localVideoRef} autoPlay muted></video>
+        <div className={styles.parentLobby}>
+          <div className={styles.leftSection}>
+            <h2>Ready to join?</h2>
+            <div className={styles.lobbyVideoPreview}>
+              <video ref={localVideoRef} autoPlay muted ></video>
+            </div>
           </div>
+          <div className={styles.joinLayout}>
+            <TextField
+              id="outlined-basic"
+              label="Username"
+              value={username}
+              onChange={(e) => {setUsername(e.target.value); setLobbyError("");}}
+              variant="outlined"
+            />
+            {lobbyError && (<p className={styles.lobbyError}>{lobbyError}</p>)}
+            <br />
+            <Button variant="contained" onClick={connect} size="large">
+              Join Meeting
+            </Button>
+          </div>
+          
         </div>
       ) : (
         <div className={styles.meetVideoContainer}>
