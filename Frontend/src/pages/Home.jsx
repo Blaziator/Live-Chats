@@ -9,12 +9,20 @@ import { HistoryContext } from '../contexts/HistoryContext.jsx';
 function HomeComponent() {
 
     const [meetingCode, setMeetingCode] = useState("");
+    const [meetingCodeError, setMeetingCodeError] = useState("");
     const {addToHistory} = useContext(HistoryContext);
 
     let navigate = useNavigate();
     let handleJoinVideoCall = async()=>{
-        await addToHistory(meetingCode)
-        navigate(`/${meetingCode}`)
+        const trimmedMeetingCode = meetingCode.trim();
+        if (!trimmedMeetingCode) {
+            setMeetingCodeError("Enter a meeting code.");
+        return;
+        }
+
+        setMeetingCodeError("");
+        await addToHistory(trimmedMeetingCode);
+        navigate(`/${trimmedMeetingCode}`);
     }
 
     let handleLogout = ()=>{
@@ -40,7 +48,18 @@ function HomeComponent() {
                 <div>
                     <h2>Providing Quality Calls</h2>
                     <div style={{display: "flex", gap: "10px"}}>
-                        <TextField onChange={e => setMeetingCode(e.target.value)} id="outlined-basic" label="Meeting Code" variant="outlined" />
+                        <TextField
+                            value={meetingCode}
+                            onChange={(e) => {
+                                setMeetingCode(e.target.value);
+                                setMeetingCodeError("");
+                            }}
+                            id="outlined-basic"
+                            label="Meeting Code"
+                            variant="outlined"
+                            error={Boolean(meetingCodeError)}
+                            helperText={meetingCodeError}
+                        />
                         <Button onClick={handleJoinVideoCall} variant='contained'>Join</Button>
                     </div>
                 </div>

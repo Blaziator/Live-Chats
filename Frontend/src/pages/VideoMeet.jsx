@@ -3,7 +3,7 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import io from "socket.io-client";
 import styles from "../styles/videoComponent.module.css";
-import { Badge, IconButton, TextField } from "@mui/material";
+import { Badge, IconButton, TextField, Tooltip } from "@mui/material";
 import { Button } from "@mui/material";
 import VideocamIcon from "@mui/icons-material/Videocam";
 import VideocamOffIcon from "@mui/icons-material/VideocamOff";
@@ -47,7 +47,7 @@ export default function VideoMeetComponent() {
   let [askForUsername, setAskForUsername] = useState(true);
   let [username, setUsername] = useState("");
   let [videos, setVideos] = useState([]);
-
+  
   let [lobbyError, setLobbyError] = useState("");
 
   const getPermissions = async () => {
@@ -104,7 +104,7 @@ export default function VideoMeetComponent() {
   };
 
   let createCompleteStream = (stream)=>{
-    const videoTrack = stream?.getVideoTracks()[0] || black();
+    const videoTrack = stream?.getVideoTracks()[0] || avatarVideoTrack(username || "Guest");
     const audioTrack = stream?.getAudioTracks()[0] || silence();
 
     return new MediaStream([videoTrack, audioTrack]);
@@ -127,7 +127,7 @@ export default function VideoMeetComponent() {
   };
 
   let getFallbackStream = () => {
-    return new MediaStream([black(), silence()]);
+    return new MediaStream([avatarVideoTrack(username || "Guest"), silence()]);
   };
 
   let addLocalTracksToPeerConnection = (peerConnection, stream) => {
@@ -137,7 +137,7 @@ export default function VideoMeetComponent() {
   };
 
   let replaceTracksForAllConnections = (stream) => {
-    const videoTrack = stream.getVideoTracks()[0] || black();
+    const videoTrack = stream.getVideoTracks()[0] || avatarVideoTrack(username || "Guest");
     const audioTrack = stream.getAudioTracks()[0] || silence();
 
     for (let id in connections) {
@@ -236,16 +236,61 @@ export default function VideoMeetComponent() {
     return Object.assign(dst.stream.getAudioTracks()[0], { enabled: false });
   };
 
-  let black = ({ width = 640, height = 480 } = {}) => {
+  // let black = ({ width = 640, height = 480 } = {}) => {
+  //   let canvas = Object.assign(document.createElement("canvas"), {
+  //     width,
+  //     height,
+  //   });
+
+  //   canvas.getContext("2d").fillRect(0, 0, width, height);
+  //   let stream = canvas.captureStream();
+  //   return Object.assign(stream.getVideoTracks()[0], { enabled: false });
+  // };
+
+  let avatarVideoTrack = (name = "Guest", {width = 640, height = 480} = {})=>{
     let canvas = Object.assign(document.createElement("canvas"), {
-      width,
-      height,
+      width, height,
     });
 
-    canvas.getContext("2d").fillRect(0, 0, width, height);
-    let stream = canvas.captureStream();
-    return Object.assign(stream.getVideoTracks()[0], { enabled: false });
+    const ctx = canvas.getContext("2d");
+
+    const displayName = name.trim() || "Guest";
+    const firstLetter = displayName.charAt(0).toUpperCase();
+
+    const drawAvatar = () => {
+    ctx.fillStyle = "#111827";
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.fillStyle = "#2563eb";
+    ctx.beginPath();
+    ctx.arc(width / 2, height / 2 - 35, 72, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "white";
+    ctx.font = "bold 68px Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(firstLetter, width / 2, height / 2 - 35);
+
+    ctx.font = "30px Arial";
+    ctx.fillText(displayName, width / 2, height / 2 + 85);
   };
+
+  drawAvatar();
+
+  const stream = canvas.captureStream(5);
+
+  const intervalId = setInterval(drawAvatar, 1000);
+
+  const track = stream.getVideoTracks()[0];
+  track.enabled = true;
+
+  track.onended = () => {
+    clearInterval(intervalId);
+  };
+
+  return track;
+  }
 
   let getUserMedia = () => {
     if ((video && videoAvailable) || (audio && audioAvailable)) {
@@ -575,9 +620,11 @@ export default function VideoMeetComponent() {
                 </div>
                 <div className={styles.chattingDisplay}>
                   {messages.map((item, index) => (
-                    <div style={{ marginBottom: "10px" }} key={index}>
-                      <p style={{ fontWeight: "bold" }}>{item.sender}</p>
-                      <p>{item.data}</p>
+                    <div className={styles.chatMessage} key={index}>
+                      <p className={styles.chatSender}>{item.sender}</p>
+                      <div className={styles.chatBubble}>
+                        {item.data}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -602,38 +649,50 @@ export default function VideoMeetComponent() {
           )}
 
           <div className={styles.buttonContainer}>
-            <IconButton style={{ color: "white" }} onClick={handleVideo}>
-              {video === true ? <VideocamIcon /> : <VideocamOffIcon />}
-            </IconButton>
-
-            <IconButton style={{ color: "white" }} onClick={handleAudio}>
-              {audio === true ? <MicIcon /> : <MicOffIcon />}
-            </IconButton>
-
-            {screenAvailable === true ? (
-              <IconButton
-                style={{ color: "white" }}
-                onClick={handleScreenShare}
-              >
-                {screen === true ?
-                  <StopScreenShareIcon />
-                : 
-                  <ScreenShareIcon />
-                }
+            <Tooltip title={video ? "Turn camera off" : "Turn camera on"}>
+              <IconButton style={{ color: "white" }} onClick={handleVideo}>
+                {video === true ? <VideocamIcon /> : <VideocamOffIcon />}
               </IconButton>
-            ) : (
-              <></>
-            )}
+            </Tooltip>
 
-            <Badge badgeContent={newMessages} max={999} color="secondary">
-              <IconButton onClick={handleChat} style={{ color: "white" }}>
-                <ChatIcon />
+            <Tooltip title={audio ? "Mute microphone" : "Unmute microphone"}>
+              <IconButton style={{ color: "white" }} onClick={handleAudio}>
+                {audio === true ? <MicIcon /> : <MicOffIcon />}
               </IconButton>
-            </Badge>
+            </Tooltip>
 
-            <IconButton onClick={handleEndCall} style={{ color: "red" }}>
-              <CallEndIcon />
-            </IconButton>
+            
+              {screenAvailable === true ? (
+                <Tooltip title={screen ? "Stop screen sharing" : "Share screen"}>
+                  <IconButton
+                    style={{ color: "white" }}
+                    onClick={handleScreenShare}
+                  >
+                    {screen === true ?
+                      <StopScreenShareIcon />
+                    : 
+                      <ScreenShareIcon />
+                    }
+                  </IconButton>
+                </Tooltip>
+              ) : (
+                <></>
+            
+              )}
+
+            <Tooltip title="Open chat">
+              <Badge badgeContent={newMessages} max={999} color="secondary">
+                <IconButton onClick={handleChat} style={{ color: "white" }}>
+                  <ChatIcon />
+                </IconButton>
+              </Badge>
+            </Tooltip>
+            
+            <Tooltip title="End call">
+              <IconButton onClick={handleEndCall} style={{ color: "red" }}>
+                <CallEndIcon />
+              </IconButton>
+            </Tooltip>
           </div>
 
           <video
