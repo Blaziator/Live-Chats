@@ -16,7 +16,6 @@ import ChatIcon from "@mui/icons-material/Chat";
 import CloseIcon from '@mui/icons-material/Close';
 
 const server_url = server;
-var connections = {};
 
 const peerConfigConnections = {
   iceServers: [
@@ -27,6 +26,7 @@ const peerConfigConnections = {
 };
 
 export default function VideoMeetComponent() {
+  const connectionsRef = useRef({});
   var socketRef = useRef();
   let socketIdRef = useRef();
   let localVideoRef = useRef();
@@ -140,8 +140,8 @@ export default function VideoMeetComponent() {
     const videoTrack = stream.getVideoTracks()[0] || avatarVideoTrack(username || "Guest");
     const audioTrack = stream.getAudioTracks()[0] || silence();
 
-    for (let id in connections) {
-      const senders = connections[id].getSenders();
+    for (let id in connectionsRef.current) {
+      const senders = connectionsRef.current[id].getSenders();
 
       const videoSender = senders.find(
         (sender) => sender.track && sender.track.kind === "video",
@@ -332,21 +332,21 @@ export default function VideoMeetComponent() {
 
     if (fromId !== socketIdRef.current) {
       if (signal.sdp) {
-        connections[fromId]
+        connectionsRef.current[fromId]
           .setRemoteDescription(new RTCSessionDescription(signal.sdp))
           .then(() => {
             if (signal.sdp.type === "offer") {
-              connections[fromId]
+              connectionsRef.current[fromId]
                 .createAnswer()
                 .then((description) => {
-                  connections[fromId]
+                  connectionsRef.current[fromId]
                     .setLocalDescription(description)
                     .then(() => {
                       socketRef.current.emit(
                         "signal",
                         fromId,
                         JSON.stringify({
-                          sdp: connections[fromId].localDescription,
+                          sdp: connectionsRef.current[fromId].localDescription,
                         }),
                       );
                     })
@@ -359,7 +359,7 @@ export default function VideoMeetComponent() {
       }
 
       if (signal.ice) {
-        connections[fromId]
+        connectionsRef.current[fromId]
           .addIceCandidate(new RTCIceCandidate(signal.ice))
           .catch((err) => console.log(err));
       }
@@ -382,9 +382,9 @@ export default function VideoMeetComponent() {
       socketIdRef.current = socketRef.current.id;
       socketRef.current.on("chat-message", addMessage);
       socketRef.current.on("user-left", (id) => {
-        if (connections[id]) {
-          connections[id].close();
-          delete connections[id];
+        if (connectionsRef.current[id]) {
+          connectionsRef.current[id].close();
+          delete connectionsRef.current[id];
         }
         setVideos((videos) => {
           const updatedVideos = videos.filter(
@@ -399,13 +399,13 @@ export default function VideoMeetComponent() {
         clients.forEach((socketListId) => {
           if (socketListId === socketIdRef.current) return;
           
-          if (connections[socketListId]) return;
+          if (connectionsRef.current[socketListId]) return;
 
-          connections[socketListId] = new RTCPeerConnection(
+          connectionsRef.current[socketListId] = new RTCPeerConnection(
             peerConfigConnections,
           );
 
-          connections[socketListId].onicecandidate = (event) => {
+          connectionsRef.current[socketListId].onicecandidate = (event) => {
             if (event.candidate != null) {
               socketRef.current.emit(
                 "signal",
@@ -415,7 +415,7 @@ export default function VideoMeetComponent() {
             }
           };
 
-          connections[socketListId].ontrack = (event) => {
+          connectionsRef.current[socketListId].ontrack = (event) => {
             if (event.track.kind !== "video") return;
 
             const [remoteStream] = event.streams;
@@ -427,7 +427,7 @@ export default function VideoMeetComponent() {
 
           if (window.localStream !== undefined && window.localStream !== null) {
             addLocalTracksToPeerConnection(
-              connections[socketListId],
+              connectionsRef.current[socketListId],
               window.localStream,
             );
           } else {
@@ -436,24 +436,24 @@ export default function VideoMeetComponent() {
             const fallbackStream = getFallbackStream();
             attachLocalStream(fallbackStream);
             addLocalTracksToPeerConnection(
-              connections[socketListId],
+              connectionsRef.current[socketListId],
               window.localStream,
             );
           }
         });
 
         if (id === socketIdRef.current) {
-          for (let id2 in connections) {
+          for (let id2 in connectionsRef.current) {
             if (id2 === socketIdRef.current) continue;
 
-            connections[id2].createOffer().then((description) => {
-              connections[id2]
+            connectionsRef.current[id2].createOffer().then((description) => {
+              connectionsRef.current[id2]
                 .setLocalDescription(description)
                 .then(() => {
                   socketRef.current.emit(
                     "signal",
                     id2,
-                    JSON.stringify({ sdp: connections[id2].localDescription }),
+                    JSON.stringify({ sdp: connectionsRef.current[id2].localDescription }),
                   );
                 })
                 .catch((err) => console.log(err));

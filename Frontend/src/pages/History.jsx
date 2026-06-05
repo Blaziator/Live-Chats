@@ -2,10 +2,7 @@ import React, { useContext, useEffect, useState } from 'react'
 import { HistoryContext } from '../contexts/HistoryContext'
 import { useNavigate } from 'react-router-dom';
 import Card from '@mui/material/Card';
-import Box from '@mui/material/Box';
-import CardActions from '@mui/material/CardActions';
 import CardContent from '@mui/material/CardContent';
-import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 import HomeIcon from '@mui/icons-material/Home';
 
@@ -52,7 +49,7 @@ export default function History() {
                 (meetings.length !== 0) ? meetings.map((e, i) => {
                     return (
                         <>
-                            <Card key={i} variant="outlined">
+                            <Card key={e._id} variant="outlined">
                                 <CardContent>
                                     <Typography sx={{ fontSize: 14 }} color="text.secondary" gutterBottom>
                                         Code: {e.meetingCode}

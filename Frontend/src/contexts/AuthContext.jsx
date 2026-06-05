@@ -14,7 +14,7 @@ export const AuthProvider = ({children})=>{
     const authContext = useContext(AuthContext);
     const navigate = useNavigate();
 
-    const [userData, setUserData] = useState(authContext);
+    const [userData, setUserData] = useState(null);
 
     const handleRegister = async(name, username, password)=>{
         try{
@@ -36,9 +36,6 @@ export const AuthProvider = ({children})=>{
             let request = await client.post("/login",{
                 username, password
             });
-
-            console.log(username, password)
-            console.log(request.data)
 
             if(request.status === httpStatus.OK){
                 localStorage.setItem("token", request.data.token);

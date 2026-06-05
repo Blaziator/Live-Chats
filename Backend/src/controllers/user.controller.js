@@ -1,7 +1,7 @@
 import User from "../models/user.model.js";
 import Meeting from "../models/meeting.model.js";
 import httpStatus from "http-status";
-import bcrypt, { hash } from "bcrypt";
+import bcrypt from "bcrypt";
 import crypto from "crypto";
 
 const login = async (req, res) => {
@@ -67,7 +67,9 @@ const getUserHistory = async(req, res)=>{
 
   try{
     const user = await User.findOne({token});
-
+    if(!user){
+      return res.status(401).json({message: "Invalid or expired token"});
+    }
     const meetings = await Meeting.find({user_id: user.username})
     
     res.json(meetings);
@@ -82,7 +84,9 @@ const addToHistory = async(req,res)=>{
   
   try{
     const user = await User.findOne({token});
-
+    if(!user){
+      return res.status(401).json({message: "Invalid or expired token"});
+    }
     const newMeeting = new Meeting({
       user_id: user.username,
       meetingCode: meeting_code

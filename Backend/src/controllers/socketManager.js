@@ -1,12 +1,5 @@
 import {Server} from 'socket.io';
 
-//Coonections is an Object containing array
-/*
-    let connections = {
-        "math-class": ["ID_ALICE", "ID_BOB"],
-        "yoga-room": ["ID_CHARLIE"]
-    };
-*/
 let connections = {};
 let messages = {};
 let timeOnline = {};
@@ -68,10 +61,11 @@ const connectToSocket = (server)=>{
         })
 
         socket.on("disconnect", ()=>{
-            var diffTime = Math.abs(timeOnline[socket.id] - new Date());
+            delete timeOnline[socket.id];
             var key
-
+            let found = false;
             for(const [k,v] of Object.entries(connections)){
+                if(found) break;
                 for(let a = 0; a < v.length; ++a){
                     if(v[a] === socket.id){
                         key = k;
@@ -86,7 +80,10 @@ const connectToSocket = (server)=>{
 
                         if(connections[key].length === 0){
                             delete connections[key];
+                            delete messages[key];
                         }
+                        found = true;
+                        break;
                     }
                 }
             }
