@@ -47,8 +47,15 @@ export default function VideoMeetComponent() {
   let [askForUsername, setAskForUsername] = useState(true);
   let [username, setUsername] = useState("");
   let [videos, setVideos] = useState([]);
-  
+  let [errorMessages, setErrorMessages] = useState([]);
   let [lobbyError, setLobbyError] = useState("");
+
+  let showError = (msg) => {
+    setErrorMessages(prev => [...prev, msg]);
+    setTimeout(() => {
+        setErrorMessages(prev => prev.filter(m => m !== msg));  
+    },5000);
+};
 
   const getPermissions = async () => {
     let rawStream = null;
@@ -70,6 +77,7 @@ export default function VideoMeetComponent() {
       videoPermission.getTracks().forEach((track) => track.stop());
     } catch (err) {
       console.log("Video permission unavailable:", err);
+      showError("Camera is unavailable. You will join with avatar.");
     }
 
     try {
@@ -80,6 +88,7 @@ export default function VideoMeetComponent() {
       audioPermission.getTracks().forEach((track) => track.stop());
     } catch (err) {
       console.log("Audio permission unavailable:", err);
+      showError("Microphone is unavailable. You will join muted.");
     }
 
     setVideoAvailable(hasVideo);
@@ -96,6 +105,7 @@ export default function VideoMeetComponent() {
       attachLocalStream(completeStream);
     }catch(err){
       console.log("Unable to create local stream:", err);
+      showError("Could not access camera or microphone.");
 
       const fallbackStream = getFallbackStream();
       attachLocalStream(fallbackStream);
@@ -196,9 +206,10 @@ export default function VideoMeetComponent() {
       window.localStream.getTracks().forEach((track) => track.stop());
     } catch (err) {
       console.log(err);
+      showError("Failed to switch camera/mic. Please rejoin.");
     }
 
-  const completeStream = createCompleteStream(stream);
+    const completeStream = createCompleteStream(stream);
 
     attachLocalStream(completeStream);
     replaceTracksForAllConnections(completeStream);
@@ -211,10 +222,10 @@ export default function VideoMeetComponent() {
 
           try {
             let tracks = localVideoRef.current.srcObject.getTracks();
-
             tracks.forEach((track) => track.stop());
           } catch (err) {
             console.log(err);
+            showError("Camera or mic disconnected unexpectedly.");
           }
 
           const fallbackStream = getFallbackStream();
@@ -350,18 +361,18 @@ export default function VideoMeetComponent() {
                         }),
                       );
                     })
-                    .catch((err) => console.log(err));
+                    .catch((err) => {console.log(err); showError("Connection error. Please rejoin the meeting.");});
                 })
-                .catch((err) => console.log(err));
+                .catch((err) => {console.log(err); showError("Connection error. Please rejoin the meeting.");});
             }
           })
-          .catch((err) => console.log(err));
+          .catch((err) => {console.log(err); showError("Connection error. Please rejoin the meeting.");});
       }
 
       if (signal.ice) {
         connectionsRef.current[fromId]
           .addIceCandidate(new RTCIceCandidate(signal.ice))
-          .catch((err) => console.log(err));
+          .catch((err) => {console.log(err); showError("Connection error. Please rejoin the meeting.");});
       }
     }
   };
@@ -493,6 +504,7 @@ export default function VideoMeetComponent() {
       window.localStream.getTracks().forEach((track) => track.stop());
     } catch (err) {
       console.log(err);
+      showError("Failed to start screen sharing. Please try again.");
     }
 
     const completeStream = createCompleteStream(stream);
@@ -511,6 +523,7 @@ export default function VideoMeetComponent() {
             tracks.forEach((track) => track.stop());
           } catch (err) {
             console.log(err);
+            showError("Screen sharing stopped unexpectedly.");
           }
 
           const fallbackStream = getFallbackStream();
@@ -555,7 +568,8 @@ export default function VideoMeetComponent() {
        getDisplayMediaSuccess(stream);
 
     }catch(err){
-      console.log(err);
+      console.log("Screen share error:", err);
+      showError("Screen sharing was cancelled or is not supported.");
       setScreen(false);
     }
 
@@ -584,7 +598,22 @@ export default function VideoMeetComponent() {
   return (
     <>
       {askForUsername === true ? (
-        <div className={styles.parentLobby}>
+        <div className={styles.parentLobby} style={{position: "relative"}}>
+          {errorMessages.map((msg, index) => (
+        <div
+            key={index}
+            className={styles.errorBanner}
+            style={{
+                position: "absolute",
+                top: `${20 + index * 60}px`,
+                left: "50%",
+                transform: "translateX(-50%)",
+                zIndex: 10
+            }}
+        >
+            {msg}
+        </div>
+    ))} 
           <div className={styles.leftSection}>
             <h2>Ready to join?</h2>
             <div className={styles.lobbyVideoPreview}>
@@ -609,6 +638,13 @@ export default function VideoMeetComponent() {
         </div>
       ) : (
         <div className={styles.meetVideoContainer}>
+
+        {errorMessages.map((msg, index) => (
+          <div key={index} className={styles.lobbyError} style={{ top: `${20 + index * 60}px` }}>
+              {msg}
+          </div>
+        ))}
+
           {showModal ? (
             <div className={styles.chatRoom}>
               <div className={styles.chatContainer}>

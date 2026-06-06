@@ -23,7 +23,8 @@ export const HistoryProvider = ({ children }) => {
             return request.data;
 
         } catch(err){
-            throw err;
+            console.log(err);
+            return [];
         }
     };
 
@@ -40,7 +41,7 @@ export const HistoryProvider = ({ children }) => {
 
             return request;
         } catch(err){
-            throw err;
+            console.error("Could not save meeting to history:", err.response?.data?.message || err.message);
         }
     };
 

@@ -27,7 +27,7 @@ export const AuthProvider = ({children})=>{
             }
 
         }catch(err){
-            throw err;
+            return err.response?.data?.message || "Something went wrong";
         }
     }
 
@@ -43,7 +43,7 @@ export const AuthProvider = ({children})=>{
             }
 
         }catch(err){
-            throw err;
+            return err.response?.data?.message || "Something went wrong";
         }
     }
     
